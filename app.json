@@ -11,10 +11,8 @@
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.draganamanevska.myplaces",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "The app accesses your camera to let you take photos and videos.",
-        "NSPhotoLibraryUsageDescription": "The app accesses your photo library so you can select images.",
-        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location"
+        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to access your location to show it on the map.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to access your location."
       }
     },
     "android": {
@@ -58,7 +56,9 @@
           "locationPermission": "Allow $(PRODUCT_NAME) to use your location",
           "locationWhenInUsePermission": "Allow this app to access your location"
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-dev-client"
     ],
     "experiments": {
       "typedRoutes": true,
