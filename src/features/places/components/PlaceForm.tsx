@@ -3,20 +3,21 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import Button from '@/src/shared/components/Button';
 import Input from '@/src/shared/components/Input';
+import { getAddress } from '@/src/shared/utils/location';
 import { Colors } from '@/src/theme/colors';
 import { Place } from '../types/place.model';
 import ImagePicker from './ImagePicker';
 import LocationPicker from './LocationPicker';
 
 type PlaceFormProps = {
-  onCancel: () => void;
-  onSubmit: (placeData: Omit<Place, 'id'>) => void;
+  // onCancel: () => void;
+  onSubmit: (placeData: Place) => void;
   submitButtonLabel: string;
   defaultValues?: Place;
 };
 
 const PlaceForm = ({
-  onCancel,
+  // onCancel,
   onSubmit,
   submitButtonLabel,
   defaultValues,
@@ -25,7 +26,7 @@ const PlaceForm = ({
     defaultValues ? defaultValues.title : '',
   );
   const [selectedImage, setSelectedImage] = React.useState(
-    defaultValues ? defaultValues.imageUri : undefined,
+    defaultValues ? defaultValues.imageAssetId : undefined,
   );
   const [pickedLocation, setPickedLocation] = React.useState(
     defaultValues ? defaultValues.location : undefined,
@@ -54,7 +55,7 @@ const PlaceForm = ({
     setPickedLocation(location);
   };
 
-  const savePlaceHandler = () => {
+  const savePlaceHandler = async () => {
     if (enteredTitle.trim().length === 0) {
       Alert.alert('Missing title', 'Please enter a title before saving.');
       return;
@@ -70,13 +71,12 @@ const PlaceForm = ({
       return;
     }
 
-    const placeData = {
+    const placeData: Place = {
       title: enteredTitle.trim(),
-      address: '',
+      address: await getAddress(pickedLocation.lat, pickedLocation.lng),
       location: pickedLocation,
-      imageUri: selectedImage,
+      imageAssetId: selectedImage,
     };
-    console.log({ placeData });
 
     onSubmit(placeData);
   };

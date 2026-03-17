@@ -5,35 +5,47 @@ import {
   PermissionStatus,
   useCameraPermissions,
 } from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 
 type ImagePickerProps = {
-  onTakeImage: (imageUri: string) => void;
+  onTakeImage: (assetId: string) => void;
 };
 
 const ImagePicker = ({ onTakeImage }: ImagePickerProps) => {
-  const [imageUri, setImageUri] = useState<string | undefined>();
-  const [cameraPermissionInformation, requestPermission] =
-    useCameraPermissions();
+  const [previewUri, setPreviewUri] = useState<string | undefined>();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [mediaPermission, requestMediaPermission] =
+    MediaLibrary.usePermissions();
 
   const verifyPermissions = async () => {
-    if (!cameraPermissionInformation) {
+    if (!cameraPermission) {
       return false;
     }
 
-    if (cameraPermissionInformation.status === PermissionStatus.UNDETERMINED) {
-      const permissionResponse = await requestPermission();
-      return permissionResponse.granted;
-    }
-
-    if (cameraPermissionInformation.status === PermissionStatus.DENIED) {
+    if (cameraPermission.status === PermissionStatus.UNDETERMINED) {
+      const response = await requestCameraPermission();
+      if (!response.granted) return false;
+    } else if (cameraPermission.status === PermissionStatus.DENIED) {
       Alert.alert(
         'Insufficient permissions!',
         'You need to grant camera permissions to use this app.',
         [{ text: 'Okay' }],
       );
       return false;
+    }
+
+    if (!mediaPermission?.granted) {
+      const response = await requestMediaPermission();
+      if (!response.granted) {
+        Alert.alert(
+          'Photo library access required',
+          'Please grant photo library access so the image can be saved.',
+          [{ text: 'Okay' }],
+        );
+        return false;
+      }
     }
 
     return true;
@@ -52,19 +64,21 @@ const ImagePicker = ({ onTakeImage }: ImagePickerProps) => {
       quality: 0.5,
     });
 
-    if (image && image.assets && image.assets.length > 0) {
-      setImageUri(image.assets[0].uri);
-      onTakeImage(image.assets[0].uri);
+    if (image?.assets?.[0]) {
+      const tempUri = image.assets[0].uri;
+      const asset = await MediaLibrary.createAssetAsync(tempUri);
+      setPreviewUri(tempUri);
+      onTakeImage(asset.id);
     }
   };
 
   let imagePreview = <Text style={styles.title}>No image taken yet.</Text>;
 
-  if (imageUri) {
+  if (previewUri) {
     imagePreview = (
       <Image
         style={styles.image}
-        source={{ uri: imageUri }}
+        source={{ uri: previewUri }}
       />
     );
   }

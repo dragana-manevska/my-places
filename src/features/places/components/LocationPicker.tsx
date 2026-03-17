@@ -1,5 +1,5 @@
 import CombinedButton from '@/src/shared/components/CombinedButton';
-import { getMapPreview } from '@/src/shared/utils/location';
+import { getAddress, getMapPreview } from '@/src/shared/utils/location';
 import { Colors } from '@/src/theme/colors';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -8,96 +8,121 @@ import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 
 type LocationPickerProps = {
-  onPickLocation: (location: { lat: number; lng: number }) => void;
+  onPickLocation: (location: {
+    lat: number;
+    lng: number;
+    address?: string;
+  }) => void;
 };
 
 const LocationPicker = ({ onPickLocation }: LocationPickerProps) => {
   const { location, loading, getLocation } = useUserLocation();
-  const { pickedLat, pickedLng } = useLocalSearchParams<{
+
+  const params = useLocalSearchParams<{
     pickedLat?: string | string[];
     pickedLng?: string | string[];
   }>();
 
   const pickedCoordinates = useMemo(() => {
-    const latValue = Array.isArray(pickedLat) ? pickedLat[0] : pickedLat;
-    const lngValue = Array.isArray(pickedLng) ? pickedLng[0] : pickedLng;
+    const lat = Array.isArray(params.pickedLat)
+      ? params.pickedLat[0]
+      : params.pickedLat;
 
-    const latitude = Number(latValue);
-    const longitude = Number(lngValue);
+    const lng = Array.isArray(params.pickedLng)
+      ? params.pickedLng[0]
+      : params.pickedLng;
+
+    const latitude = Number(lat);
+    const longitude = Number(lng);
 
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       return null;
     }
 
-    return {
-      latitude,
-      longitude,
+    return { latitude, longitude };
+  }, [params.pickedLat, params.pickedLng]);
+
+  const previewCoords = useMemo(() => {
+    if (pickedCoordinates) return pickedCoordinates;
+
+    if (location) {
+      return {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+    }
+
+    return null;
+  }, [pickedCoordinates, location]);
+
+  const locateUserHandler = () => {
+    router.setParams({
+      pickedLat: undefined,
+      pickedLng: undefined,
+    });
+
+    getLocation();
+  };
+
+  useEffect(() => {
+    const sendPickedLocation = async () => {
+      if (!previewCoords) return;
+
+      if (pickedCoordinates) {
+        const address = await getAddress(
+          previewCoords.latitude,
+          previewCoords.longitude,
+        );
+
+        onPickLocation({
+          lat: previewCoords.latitude,
+          lng: previewCoords.longitude,
+          address,
+        });
+      } else {
+        onPickLocation({
+          lat: previewCoords.latitude,
+          lng: previewCoords.longitude,
+        });
+      }
     };
-  }, [pickedLat, pickedLng]);
+
+    sendPickedLocation();
+  }, [previewCoords, pickedCoordinates, onPickLocation]);
 
   const pickOnMapHandler = () => {
     router.push('/(modals)/map');
   };
 
-  useEffect(() => {
-    if (pickedCoordinates) {
-      onPickLocation({
-        lat: pickedCoordinates.latitude,
-        lng: pickedCoordinates.longitude,
-      });
-      return;
+  const renderPreview = () => {
+    if (loading) {
+      return <ActivityIndicator size='large' />;
     }
 
-    if (location) {
-      onPickLocation({
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
-      });
+    if (!previewCoords) {
+      return <Text>No location chosen yet!</Text>;
     }
-  }, [location, onPickLocation, pickedCoordinates]);
 
-  let locationPreview = <Text>No location chosen yet!</Text>;
-
-  if (loading) {
-    locationPreview = <ActivityIndicator size='large' />;
-  }
-
-  if (pickedCoordinates) {
-    locationPreview = (
+    return (
       <Image
         style={styles.image}
         source={{
-          uri: getMapPreview(
-            pickedCoordinates.latitude,
-            pickedCoordinates.longitude,
-          ),
+          uri: getMapPreview(previewCoords.latitude, previewCoords.longitude),
         }}
       />
     );
-  } else if (location) {
-    locationPreview = (
-      <Image
-        style={styles.image}
-        source={{
-          uri: getMapPreview(
-            location.coords.latitude,
-            location.coords.longitude,
-          ),
-        }}
-      />
-    );
-  }
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.locationPreview}>{locationPreview}</View>
+      <View style={styles.locationPreview}>{renderPreview()}</View>
 
       <View style={styles.actions}>
         <CombinedButton
           icon='location'
           mode='primary'
           size={24}
-          onPress={getLocation}
+          onPress={locateUserHandler}
         >
           Locate User
         </CombinedButton>
