@@ -17,7 +17,7 @@ const ExpensesOutput = ({
   expensesPeriod,
   falbackText,
 }: ExpensesOutputProps) => {
-  const infoTextColor = Colors.primary800;
+  const infoTextColor = Colors.primary50;
   let content = (
     <Text style={[styles.infoText, { color: infoTextColor }]}>
       {falbackText}

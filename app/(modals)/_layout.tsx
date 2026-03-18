@@ -31,6 +31,18 @@ export default function ModalsLayout() {
           name='add-place'
           options={{
             title: 'Add a New Place',
+            headerRight: () => (
+              <Pressable
+                onPress={() => router.back()}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name='close'
+                  size={24}
+                  color={Colors.gray100}
+                />
+              </Pressable>
+            ),
           }}
         />
         <Stack.Screen

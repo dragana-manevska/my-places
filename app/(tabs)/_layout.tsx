@@ -10,6 +10,8 @@ import React from 'react';
 export default function TabLayout() {
   const { logout } = useLogout();
   const pathname = usePathname();
+  const isPlaceDetailsRoute =
+    pathname.startsWith('/all-places/') && pathname !== '/all-places';
 
   const handleLogout = async () => {
     await logout();
@@ -41,20 +43,25 @@ export default function TabLayout() {
           tabBarInactiveTintColor: Colors.primary100,
           tabBarActiveTintColor: Colors.gray100,
           tabBarButton: HapticTab,
-          headerRight: ({ tintColor }) => (
-            <IconButton
-              icon='plus'
-              size={24}
-              color={tintColor ?? Colors.gray100}
-              onPress={handlePressRight}
-            />
-          ),
+          headerRight: ({ tintColor }) =>
+            isPlaceDetailsRoute ? null : (
+              <IconButton
+                icon='plus'
+                size={24}
+                color={tintColor ?? Colors.gray100}
+                onPress={handlePressRight}
+              />
+            ),
           headerLeft: ({ tintColor }) => (
             <IconButton
-              icon='rectangle.portrait.and.arrow.right'
+              icon={
+                isPlaceDetailsRoute
+                  ? 'chevron.left'
+                  : 'rectangle.portrait.and.arrow.right'
+              }
               size={24}
               color={tintColor ?? Colors.gray100}
-              onPress={handleLogout}
+              onPress={isPlaceDetailsRoute ? () => router.back() : handleLogout}
             />
           ),
         })}

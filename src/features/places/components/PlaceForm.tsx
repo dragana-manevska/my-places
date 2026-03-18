@@ -10,14 +10,12 @@ import ImagePicker from './ImagePicker';
 import LocationPicker from './LocationPicker';
 
 type PlaceFormProps = {
-  // onCancel: () => void;
   onSubmit: (placeData: Place) => void;
   submitButtonLabel: string;
   defaultValues?: Place;
 };
 
 const PlaceForm = ({
-  // onCancel,
   onSubmit,
   submitButtonLabel,
   defaultValues,
@@ -35,7 +33,7 @@ const PlaceForm = ({
   const changeTitleHandler = (inputType: string, enteredValue: string) => {
     switch (inputType) {
       case 'title':
-        if (enteredValue.length > 50 || enteredValue.trim().length === 0) {
+        if (enteredValue.length > 50) {
           Alert.alert(
             'Invalid title',
             'Title must be between 1 and 50 characters long.',

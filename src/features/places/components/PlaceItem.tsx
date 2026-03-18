@@ -4,12 +4,20 @@ import React, { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface PlaceItemProps {
+  id?: string | number;
   title: string;
   imageAssetId: string;
   address: string;
+  onSelect: (placeId: string) => void;
 }
 
-const PlaceItem = ({ title, imageAssetId, address }: PlaceItemProps) => {
+const PlaceItem = ({
+  id,
+  title,
+  imageAssetId,
+  address,
+  onSelect,
+}: PlaceItemProps) => {
   const [imageUri, setImageUri] = useState<string | undefined>();
 
   useEffect(() => {
@@ -21,7 +29,8 @@ const PlaceItem = ({ title, imageAssetId, address }: PlaceItemProps) => {
   }, [imageAssetId]);
 
   const onSelectPlace = () => {
-    // Handle place selection
+    if (!id) return;
+    onSelect(String(id));
   };
 
   return (

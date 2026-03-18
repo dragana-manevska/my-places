@@ -1,4 +1,5 @@
 import { refreshAuthTokenApi } from '@/src/features/auth/api/auth.api';
+import { clearSession } from '@/src/features/auth/services/auth.session';
 import { useAuthContext } from '@/src/features/auth/store/auth.store';
 import { storage } from '@/src/lib/storage';
 import * as SplashScreen from 'expo-splash-screen';
@@ -56,7 +57,8 @@ export const useAuthBootstrap = () => {
             setAuth(newToken, updatedUserData);
           } catch (error) {
             console.error('Failed to refresh token:', error);
-            // If refresh fails, clear auth data and redirect to login
+            // If refresh fails, clear auth and storage to prevent retry loops
+            await clearSession();
             clearAuth();
           }
         } else {

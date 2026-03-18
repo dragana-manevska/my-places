@@ -1,4 +1,5 @@
 import { Colors } from '@/src/theme/colors';
+import { router } from 'expo-router';
 import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Place } from '../types/place.model';
@@ -8,11 +9,22 @@ interface PlacesListProps {
   places: Place[];
 }
 
-const renderPlaceItem = (itemData: any) => {
-  return <PlaceItem {...itemData.item} />;
-};
-
 const PlacesList = ({ places }: PlacesListProps) => {
+  const selectPlaceHandler = (placeId: string) => {
+    router.push({
+      pathname: '/(tabs)/all-places/[placeId]',
+      params: { placeId },
+    });
+  };
+
+  const renderPlaceItem = (itemData: any) => {
+    return (
+      <PlaceItem
+        {...itemData.item}
+        onSelect={selectPlaceHandler}
+      />
+    );
+  };
   if (!places || places.length === 0) {
     return (
       <View style={styles.container}>
@@ -45,6 +57,6 @@ const styles = StyleSheet.create({
   },
   fallbackText: {
     fontSize: 16,
-    color: Colors.primary200,
+    color: Colors.primary50,
   },
 });

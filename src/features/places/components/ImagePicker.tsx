@@ -1,13 +1,19 @@
 import CombinedButton from '@/src/shared/components/CombinedButton';
 import { Colors } from '@/src/theme/colors';
-import {
-  launchCameraAsync,
-  PermissionStatus,
-  useCameraPermissions,
-} from 'expo-image-picker';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
-import { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  Alert,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import ImageViewing from 'react-native-image-viewing';
 
 type ImagePickerProps = {
   onTakeImage: (assetId: string) => void;
@@ -15,25 +21,21 @@ type ImagePickerProps = {
 
 const ImagePicker = ({ onTakeImage }: ImagePickerProps) => {
   const [previewUri, setPreviewUri] = useState<string | undefined>();
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+
+  const cameraRef = useRef<CameraView>(null);
+
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] =
     MediaLibrary.usePermissions();
 
   const verifyPermissions = async () => {
-    if (!cameraPermission) {
-      return false;
-    }
+    if (!cameraPermission) return false;
 
-    if (cameraPermission.status === PermissionStatus.UNDETERMINED) {
+    if (!cameraPermission.granted) {
       const response = await requestCameraPermission();
       if (!response.granted) return false;
-    } else if (cameraPermission.status === PermissionStatus.DENIED) {
-      Alert.alert(
-        'Insufficient permissions!',
-        'You need to grant camera permissions to use this app.',
-        [{ text: 'Okay' }],
-      );
-      return false;
     }
 
     if (!mediaPermission?.granted) {
@@ -41,8 +43,7 @@ const ImagePicker = ({ onTakeImage }: ImagePickerProps) => {
       if (!response.granted) {
         Alert.alert(
           'Photo library access required',
-          'Please grant photo library access so the image can be saved.',
-          [{ text: 'Okay' }],
+          'Please grant access so the image can be saved.',
         );
         return false;
       }
@@ -51,35 +52,82 @@ const ImagePicker = ({ onTakeImage }: ImagePickerProps) => {
     return true;
   };
 
-  const takeImageHandler = async () => {
+  const openCamera = async () => {
     const hasPermission = await verifyPermissions();
+    if (!hasPermission) return;
 
-    if (!hasPermission) {
-      return;
-    }
+    setShowCamera(true);
+  };
 
-    const image = await launchCameraAsync({
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.5,
+  const takePhoto = async () => {
+    if (!cameraRef.current) return;
+
+    const photo = await cameraRef.current.takePictureAsync({
+      quality: 0.8,
     });
 
-    if (image?.assets?.[0]) {
-      const tempUri = image.assets[0].uri;
-      const asset = await MediaLibrary.createAssetAsync(tempUri);
-      setPreviewUri(tempUri);
-      onTakeImage(asset.id);
-    }
+    const fixedImage = await ImageManipulator.manipulateAsync(
+      photo.uri,
+      [{ rotate: 0 }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+    );
+
+    const asset = await MediaLibrary.createAssetAsync(fixedImage.uri);
+
+    setPreviewUri(fixedImage.uri);
+    onTakeImage(asset.id);
+
+    setShowCamera(false);
   };
+
+  if (showCamera) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.imagePreview}>
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.cameraOverlay}>
+            <TouchableOpacity
+              onPress={takePhoto}
+              style={styles.captureBtn}
+            />
+            <TouchableOpacity
+              onPress={() => setShowCamera(false)}
+              style={styles.cancelBtn}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <CombinedButton
+          icon='camera'
+          mode='primary'
+          size={24}
+          onPress={openCamera}
+        >
+          Take a picture
+        </CombinedButton>
+      </View>
+    );
+  }
 
   let imagePreview = <Text style={styles.title}>No image taken yet.</Text>;
 
   if (previewUri) {
     imagePreview = (
-      <Image
-        style={styles.image}
-        source={{ uri: previewUri }}
-      />
+      <Pressable
+        onPress={() => setViewerVisible(true)}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <Image
+          style={styles.image}
+          source={{ uri: previewUri }}
+          resizeMode='contain'
+        />
+      </Pressable>
     );
   }
 
@@ -90,10 +138,18 @@ const ImagePicker = ({ onTakeImage }: ImagePickerProps) => {
         icon='camera'
         mode='primary'
         size={24}
-        onPress={takeImageHandler}
+        onPress={openCamera}
       >
         Take a picture
       </CombinedButton>
+
+      <ImageViewing
+        images={[{ uri: previewUri }]}
+        imageIndex={0}
+        visible={viewerVisible}
+        onRequestClose={() => setViewerVisible(false)}
+        presentationStyle='fullScreen'
+      />
     </View>
   );
 };
@@ -124,5 +180,29 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+
+  cameraOverlay: {
+    ...StyleSheet.absoluteFill,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingBottom: 10,
+    gap: 16,
+  },
+  captureBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'white',
+  },
+  cancelBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  cancelText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });

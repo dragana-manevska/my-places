@@ -100,7 +100,7 @@ const LocationPicker = ({ onPickLocation }: LocationPickerProps) => {
     }
 
     if (!previewCoords) {
-      return <Text>No location chosen yet!</Text>;
+      return <Text style={styles.fallbackText}>No location chosen yet!</Text>;
     }
 
     return (
@@ -165,5 +165,8 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  fallbackText: {
+    color: Colors.gray100,
   },
 });

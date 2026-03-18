@@ -3,7 +3,7 @@ import { useUserLocation } from '@/src/shared/hooks/useUserLocation';
 import { Colors } from '@/src/theme/colors';
 import { LocationObjectCoords } from 'expo-location';
 import { AppleMaps, GoogleMaps } from 'expo-maps';
-import { useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import {
   useCallback,
   useEffect,
@@ -30,15 +30,60 @@ type MapClickEvent = {
 const MapScreen = () => {
   const { location, loading, getLocation } = useUserLocation();
   const navigation = useNavigation();
+  const params = useLocalSearchParams<{
+    lat?: string | string[];
+    lng?: string | string[];
+    readonly?: string | string[];
+  }>();
+
+  const readonlyParam = Array.isArray(params.readonly)
+    ? params.readonly[0]
+    : params.readonly;
+
+  const isReadonly = readonlyParam === 'true';
+
+  const initialLat = Array.isArray(params.lat) ? params.lat[0] : params.lat;
+  const initialLng = Array.isArray(params.lng) ? params.lng[0] : params.lng;
+
+  const initialCoordinates = useMemo(() => {
+    const latitude = Number(initialLat);
+    const longitude = Number(initialLng);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null;
+    }
+
+    return {
+      latitude,
+      longitude,
+      altitude: null,
+      accuracy: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null,
+    } as LocationObjectCoords;
+  }, [initialLat, initialLng]);
 
   const [selectedLocation, setSelectedLocation] =
-    useState<LocationObjectCoords | null>(null);
+    useState<LocationObjectCoords | null>(initialCoordinates);
 
   useEffect(() => {
-    getLocation();
-  }, [getLocation]);
+    if (!isReadonly) {
+      getLocation();
+    }
+  }, [getLocation, isReadonly]);
+
+  useEffect(() => {
+    if (initialCoordinates) {
+      setSelectedLocation(initialCoordinates);
+    }
+  }, [initialCoordinates]);
 
   const selectLocationHandler = (event: MapClickEvent) => {
+    if (isReadonly) {
+      return;
+    }
+
     if (
       event.coordinates.latitude == null ||
       event.coordinates.longitude == null
@@ -90,18 +135,19 @@ const MapScreen = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <IconButton
-          onPress={savePickedLocationHandler}
-          icon='checkmark'
-          size={24}
-          color={Colors.gray100}
-        />
-      ),
+      headerRight: () =>
+        isReadonly ? null : (
+          <IconButton
+            onPress={savePickedLocationHandler}
+            icon='checkmark'
+            size={24}
+            color={Colors.gray100}
+          />
+        ),
     });
-  }, [navigation, savePickedLocationHandler]);
+  }, [isReadonly, navigation, savePickedLocationHandler]);
 
-  if (loading || !mapCoordinates) {
+  if ((!isReadonly && loading) || !mapCoordinates) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size='large' />
@@ -138,7 +184,7 @@ const MapScreen = () => {
         style={styles.container}
         cameraPosition={cameraPosition}
         markers={markers}
-        onMapClick={selectLocationHandler}
+        onMapClick={isReadonly ? undefined : selectLocationHandler}
       />
     </View>
   );
